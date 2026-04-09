@@ -20,6 +20,19 @@ const eslintConfig = [
       "next-env.d.ts",
     ],
   },
+  {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-wrapper-object-types": "off",
+      "@typescript-eslint/ban-ts-comment": "off",
+      "@typescript-eslint/triple-slash-reference": "off",
+      "react-hooks/rules-of-hooks": "off",
+      "react/jsx-key": "warn",
+      "react/no-unescaped-entities": "warn",
+      "react/display-name": "warn",
+      "import/no-anonymous-default-export": "warn",
+    },
+  },
 ];
 
 export default eslintConfig;

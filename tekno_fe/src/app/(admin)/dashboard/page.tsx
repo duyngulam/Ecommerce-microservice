@@ -1,11 +1,16 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   getAdminStatistics,
-  getStatisticsFilters,
   invalidateStatisticsCache,
   DatePeriod,
+  GetStatisticsParams,
+  RevenueByCategory,
+  RevenueChartData,
+  RecentOrder,
+  TopCustomer,
+  TopProduct,
   StatisticsResponse,
   StatisticsError,
 } from "@/services/statistics";
@@ -48,6 +53,205 @@ const COLORS = [
 
 type ChartType = "daily" | "weekly" | "monthly";
 
+type RevenueChartPoint = {
+  label: string;
+  revenue: number;
+  orderCount: number;
+};
+
+type RevenueChartByType = Record<ChartType, RevenueChartPoint[]>;
+
+type CategoryRevenueView = {
+  categoryId: number;
+  categoryName: string;
+  revenue: number;
+  revenuePercentage: number;
+};
+
+type TopSoldProductView = {
+  productId: number;
+  productName: string;
+  categoryName: string;
+  unitsSold: number;
+  revenue: number;
+  averageRating: number;
+  totalReviews: number;
+};
+
+type TopCustomerView = {
+  userId: number;
+  customerName: string;
+  email: string;
+  customerSegment: string;
+  totalSpent: number;
+  orderCount: number;
+};
+
+type RecentOrderView = {
+  orderId: number;
+  orderNumber: string;
+  itemCount: number;
+  createdAt: string;
+  status: string;
+};
+
+type LowStockAlertView = {
+  productId: number;
+  productName: string;
+  stockLevel: number;
+};
+
+type OverviewView = {
+  totalRevenue: number;
+  totalOrders: number;
+  totalCustomers: number;
+  averageOrderValue: number;
+  revenueGrowthPercent?: number;
+  orderGrowthPercent?: number;
+  pendingOrders: number;
+  processingOrders: number;
+  completedOrders: number;
+  cancelledOrders: number;
+  orderCompletionRate: number;
+  orderCancellationRate: number;
+};
+
+const getValueFromObject = (value: unknown, key: string): unknown => {
+  if (typeof value === "object" && value !== null && key in value) {
+    return (value as Record<string, unknown>)[key];
+  }
+  return undefined;
+};
+
+const asNumber = (value: unknown, fallback = 0): number => {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+};
+
+const asString = (value: unknown, fallback = ""): string => {
+  return typeof value === "string" ? value : fallback;
+};
+
+const buildOverview = (overview: StatisticsResponse["overview"]): OverviewView => {
+  const pendingOrders = asNumber(getValueFromObject(overview, "pendingOrders"));
+  const processingOrders = asNumber(getValueFromObject(overview, "processingOrders"));
+  const completedOrders = asNumber(getValueFromObject(overview, "completedOrders"));
+  const cancelledOrders = asNumber(getValueFromObject(overview, "cancelledOrders"));
+
+  const totalOrders = asNumber(overview.totalOrders);
+  const completionFromData = getValueFromObject(overview, "orderCompletionRate");
+  const cancellationFromData = getValueFromObject(overview, "orderCancellationRate");
+  const computedCompletionRate =
+    totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0;
+  const computedCancellationRate =
+    totalOrders > 0 ? (cancelledOrders / totalOrders) * 100 : 0;
+
+  return {
+    totalRevenue: overview.totalRevenue,
+    totalOrders,
+    totalCustomers: overview.totalCustomers,
+    averageOrderValue: overview.averageOrderValue,
+    revenueGrowthPercent: overview.revenueGrowth,
+    orderGrowthPercent: overview.ordersGrowth,
+    pendingOrders,
+    processingOrders,
+    completedOrders,
+    cancelledOrders,
+    orderCompletionRate: asNumber(completionFromData, computedCompletionRate),
+    orderCancellationRate: asNumber(cancellationFromData, computedCancellationRate),
+  };
+};
+
+const toTopSoldProducts = (topProducts: TopProduct[]): TopSoldProductView[] => {
+  return topProducts.map((product) => ({
+    productId: product.id,
+    productName: product.name,
+    categoryName: "N/A",
+    unitsSold: product.totalSold,
+    revenue: product.totalRevenue,
+    averageRating: 0,
+    totalReviews: 0,
+  }));
+};
+
+const toCategoryRevenue = (
+  revenueByCategory: RevenueByCategory[]
+): CategoryRevenueView[] => {
+  return revenueByCategory.map((item) => ({
+    categoryId: item.categoryId,
+    categoryName: item.categoryName,
+    revenue: item.totalRevenue,
+    revenuePercentage: item.percentage,
+  }));
+};
+
+const toRevenueChartByType = (
+  revenueChart: RevenueChartData[]
+): RevenueChartByType => {
+  const points = revenueChart.map((point) => ({
+    label: point.date,
+    revenue: point.revenue,
+    orderCount: point.orders,
+  }));
+
+  return {
+    daily: points,
+    weekly: points,
+    monthly: points,
+  };
+};
+
+const toTopCustomers = (customers: TopCustomer[]): TopCustomerView[] => {
+  return customers.map((customer) => ({
+    userId: customer.id,
+    customerName: customer.name,
+    email: customer.email,
+    customerSegment: customer.totalSpent >= 10_000_000 ? "VIP" : "Regular",
+    totalSpent: customer.totalSpent,
+    orderCount: customer.totalOrders,
+  }));
+};
+
+const toRecentOrders = (orders: RecentOrder[]): RecentOrderView[] => {
+  return orders.map((order) => ({
+    orderId: order.id,
+    orderNumber: String(order.id),
+    itemCount: 0,
+    createdAt: order.orderDate,
+    status: order.status,
+  }));
+};
+
+const toLowStockAlerts = (productPerformance: StatisticsResponse["productPerformance"]) => {
+  const rawValue = getValueFromObject(productPerformance, "lowStockAlerts");
+
+  if (!Array.isArray(rawValue)) {
+    return [] as LowStockAlertView[];
+  }
+
+  return rawValue.reduce<LowStockAlertView[]>((acc, item) => {
+    if (typeof item !== "object" || item === null) {
+      return acc;
+    }
+
+    const record = item as Record<string, unknown>;
+    const productId = asNumber(record.productId, -1);
+    const productName = asString(record.productName, "Unknown product");
+    const stockLevel = asNumber(record.stockLevel);
+
+    if (productId < 0) {
+      return acc;
+    }
+
+    acc.push({
+      productId,
+      productName,
+      stockLevel,
+    });
+
+    return acc;
+  }, []);
+};
+
 export default function AdminStatisticsPage() {
   const [statistics, setStatistics] = useState<StatisticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,55 +266,61 @@ export default function AdminStatisticsPage() {
   const [chartType, setChartType] = useState<ChartType>("daily");
 
   // Get token (adjust based on your auth implementation)
-  const getToken = () => {
+  const getToken = useCallback(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("token") || "";
     }
     return "";
-  };
+  }, []);
+
+  const loadStatistics = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const token = getToken();
+
+      if (!token) {
+        setError("No authentication token found. Please log in.");
+        return;
+      }
+
+      const params: GetStatisticsParams = {
+        period: selectedPeriod || "Last30Days",
+        topCount: Math.max(5, Math.min(50, topCount)),
+      };
+
+      if (selectedPeriod === "Custom") {
+        if (customStartDate) params.startDate = customStartDate;
+        if (customEndDate) params.endDate = customEndDate;
+      }
+
+      console.log("[Dashboard] Loading statistics with params:", params);
+      const response = await getAdminStatistics(token, params);
+      setStatistics(response.data);
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof StatisticsError
+          ? `${err.message} (Status: ${err.status})`
+          : err instanceof Error
+          ? err.message
+          : "Failed to load statistics. Please try again.";
+
+      console.error("[Dashboard] Error details:", err);
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    customEndDate,
+    customStartDate,
+    getToken,
+    selectedPeriod,
+    topCount,
+  ]);
 
   useEffect(() => {
-    loadStatistics();
-  }, [selectedPeriod, customStartDate, customEndDate, topCount]);
-
-const loadStatistics = async () => {
-  try {
-    setLoading(true);
-    setError(null);
-    const token = getToken();
-
-    if (!token) {
-      setError("No authentication token found. Please log in.");
-      return;
-    }
-
-    const params: any = {
-      period: selectedPeriod || "Last30Days",
-      topCount: Math.max(5, Math.min(50, topCount)),
-    };
-
-    if (selectedPeriod === "Custom") {
-      if (customStartDate) params.startDate = customStartDate;
-      if (customEndDate) params.endDate = customEndDate;
-    }
-
-    console.log("[Dashboard] Loading statistics with params:", params);
-    const response = await getAdminStatistics(token, params);
-    setStatistics(response.data);
-  } catch (err: any) {
-    const errorMessage =
-      err instanceof StatisticsError
-        ? `${err.message} (Status: ${err.status})`
-        : err instanceof Error
-        ? err.message
-        : "Failed to load statistics. Please try again.";
-
-    console.error("[Dashboard] Error details:", err);
-    setError(errorMessage);
-  } finally {
-    setLoading(false);
-  }
-};
+    void loadStatistics();
+  }, [loadStatistics]);
 
   const handleInvalidateCache = async () => {
     try {
@@ -125,7 +335,7 @@ const loadStatistics = async () => {
       await invalidateStatisticsCache(token);
       await loadStatistics();
       alert("Cache invalidated and statistics refreshed!");
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMessage =
         err instanceof StatisticsError
           ? `${err.message} (Status: ${err.status})`
@@ -143,13 +353,6 @@ const loadStatistics = async () => {
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString("vi-VN") + "đ";
-  };
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("vi-VN", {
-      month: "short",
-      day: "numeric",
-    });
   };
 
   if (loading) {
@@ -189,7 +392,14 @@ const loadStatistics = async () => {
     );
   }
 
-  const { overview, topSoldProducts, categoryRevenue, topCustomers, revenueChart, recentOrders, productPerformance } = statistics;
+  const overview = buildOverview(statistics.overview);
+  const topSoldProducts = toTopSoldProducts(statistics.topProducts);
+  const categoryRevenue = toCategoryRevenue(statistics.revenueByCategory);
+  const topCustomers = toTopCustomers(statistics.topCustomers);
+  const revenueChart = toRevenueChartByType(statistics.revenueChart);
+  const recentOrders = toRecentOrders(statistics.recentOrders);
+  const lowStockAlerts = toLowStockAlerts(statistics.productPerformance);
+  const { productPerformance } = statistics;
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -500,14 +710,20 @@ const loadStatistics = async () => {
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
-                data={categoryRevenue.map((item: any) => ({
+                data={categoryRevenue.map((item) => ({
                   ...item,
                   value: item.revenue,
                 }))}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={(entry: any) => `${entry.payload.categoryName} (${entry.payload.revenuePercentage.toFixed(1)}%)`}
+                label={(entry: { payload?: CategoryRevenueView }) => {
+                  const payload = entry.payload;
+                  if (!payload) {
+                    return "Unknown";
+                  }
+                  return `${payload.categoryName} (${payload.revenuePercentage.toFixed(1)}%)`;
+                }}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
@@ -557,17 +773,17 @@ const loadStatistics = async () => {
           </div>
 
           {/* Low Stock Alerts */}
-          {productPerformance.lowStockAlerts && productPerformance.lowStockAlerts.length > 0 && (
+          {lowStockAlerts.length > 0 && (
             <div className="border-t pt-4">
               <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-orange-600" />
                 Low Stock Alerts
               </h4>
               <div className="space-y-2 max-h-40 overflow-y-auto">
-                {productPerformance.lowStockAlerts.slice(0, 5).map((alert: any) => (
-                  <div key={alert.productId} className="flex items-center justify-between p-2 bg-orange-50 rounded text-sm">
-                    <span className="text-gray-900 font-medium">{alert.productName}</span>
-                    <span className="text-orange-600 font-bold">{alert.stockLevel} left</span>
+                {lowStockAlerts.slice(0, 5).map((lowStockAlert) => (
+                  <div key={lowStockAlert.productId} className="flex items-center justify-between p-2 bg-orange-50 rounded text-sm">
+                    <span className="text-gray-900 font-medium">{lowStockAlert.productName}</span>
+                    <span className="text-orange-600 font-bold">{lowStockAlert.stockLevel} left</span>
                   </div>
                 ))}
               </div>

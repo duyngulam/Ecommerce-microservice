@@ -7,7 +7,6 @@ import AddToFavorButton from "./AddToFavorButton";
 import { Star } from "lucide-react";
 import { motion } from "framer-motion";
 import FormattedPriced from "../share/FormattedPriced";
-import { P } from "node_modules/framer-motion/dist/types.d-BJcRxCew";
 
 interface ProductCardProps {
   product: Product;

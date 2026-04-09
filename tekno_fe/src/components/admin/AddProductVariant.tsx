@@ -128,6 +128,11 @@ useEffect(() => {
         return;
       }
 
+      const attributes = Object.entries(formData.attributeValues).map(([id, value]) => ({
+        id: Number(id),
+        value,
+      }));
+
       if (editingVariant?.id) {
         // Update existing variant
         await updateProductVariant(editingVariant.id, {
@@ -136,7 +141,7 @@ useEffect(() => {
           price: formData.price,
           stock: formData.stock,
           status: "Active",
-          attributeValues: formData.attributeValues,
+          attributes,
         });
       } else {
         // Create new variant
@@ -146,7 +151,7 @@ useEffect(() => {
           price: formData.price,
           stock: formData.stock,
           status: "Active",
-          attributeValues: formData.attributeValues,
+          attributes,
         });
       }
 
