@@ -1,0 +1,175 @@
+version: "3.9"
+
+name: ecommerce-microservices
+
+services:
+  gateway:
+    build:
+      context: ../gateway
+      dockerfile: Dockerfile
+    container_name: gateway
+    ports:
+      - "8080:80"
+    depends_on:
+      - auth-service
+      - product-service
+      - order-service
+      - payment-service
+      - cart-service
+      - review-service
+      - notification-service
+    networks:
+      - ecommerce-net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: tekno
+      POSTGRES_PASSWORD: tekno123
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init-multiple-dbs.sql:/docker-entrypoint-initdb.d/init-multiple-dbs.sql
+    networks:
+      - ecommerce-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ecommerce-net
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: tekno
+      RABBITMQ_DEFAULT_PASS: tekno123
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - ecommerce-net
+
+  auth-service:
+    build:
+      context: ../services/auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    env_file:
+      - ../services/auth-service/.env.example
+    command: sh -c "echo auth-service scaffold ready; tail -f /dev/null"
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - ecommerce-net
+
+  product-service:
+    build:
+      context: ../services/product-service
+      dockerfile: Dockerfile
+    container_name: product-service
+    env_file:
+      - ../services/product-service/.env.example
+    command: sh -c "echo product-service scaffold ready; tail -f /dev/null"
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - ecommerce-net
+
+  order-service:
+    build:
+      context: ../services/order-service
+      dockerfile: Dockerfile
+    container_name: order-service
+    env_file:
+      - ../services/order-service/.env.example
+    command: sh -c "echo order-service scaffold ready; tail -f /dev/null"
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - ecommerce-net
+
+  payment-service:
+    build:
+      context: ../services/payment-service
+      dockerfile: Dockerfile
+    container_name: payment-service
+    env_file:
+      - ../services/payment-service/.env.example
+    command: sh -c "echo payment-service scaffold ready; tail -f /dev/null"
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - ecommerce-net
+
+  cart-service:
+    build:
+      context: ../services/cart-service
+      dockerfile: Dockerfile
+    container_name: cart-service
+    env_file:
+      - ../services/cart-service/.env.example
+    command: sh -c "echo cart-service scaffold ready; tail -f /dev/null"
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - ecommerce-net
+
+  review-service:
+    build:
+      context: ../services/review-service
+      dockerfile: Dockerfile
+    container_name: review-service
+    env_file:
+      - ../services/review-service/.env.example
+    command: sh -c "echo review-service scaffold ready; tail -f /dev/null"
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - ecommerce-net
+
+  notification-service:
+    build:
+      context: ../services/notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    env_file:
+      - ../services/notification-service/.env.example
+    command: sh -c "echo notification-service scaffold ready; tail -f /dev/null"
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - ecommerce-net
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+
+networks:
+  ecommerce-net:
+    driver: bridge
