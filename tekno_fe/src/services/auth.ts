@@ -10,12 +10,12 @@ export async function signupApi(data: { username: string; email: string; passwor
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || "Đăng ký thất bại!");
+      throw new Error(err.message || "Registration failed");
     }
 
     return res.json();
   } catch (err: any) {
-    throw new Error(err.message || "Không thể kết nối server!");
+    throw new Error(err.message || "Failed to connect to server!");
   }
 }
 
@@ -28,7 +28,7 @@ export async function loginApi(data: { email: string; password: string }) {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || "Đăng nhập thất bại!");
+    throw new Error(err.message || "Login failed");
   }
 
   return res.json();
@@ -43,7 +43,7 @@ export async function refreshTokenApi(refreshToken: string) {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || "Phiên đăng nhập đã hết hạn");
+    throw new Error(err.message || "Session has expired, please log in again");
   }
 
   return res.json();

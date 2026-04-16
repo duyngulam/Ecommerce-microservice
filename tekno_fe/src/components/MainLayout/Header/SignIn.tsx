@@ -32,7 +32,7 @@ export default function SignIn() {
         focus:outline-none
       "
             >
-              Đăng nhập
+              Login
             </button>
           </DialogTrigger>
 
@@ -51,7 +51,7 @@ export default function SignIn() {
         focus:outline-none
       "
             >
-              Đăng ký
+              Signup
             </button>
           </DialogTrigger>
         </div>

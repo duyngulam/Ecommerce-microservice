@@ -8,10 +8,10 @@ export class RegisterDto {
     username: string;
 
     @ApiProperty({ example: 'hathuanihi.tekno@gmail.com' })
-    @IsEmail({}, { message: 'Email không hợp lệ' })
+    @IsEmail({}, { message: 'Email is invalid' })
     email: string;
 
     @ApiProperty({ example: 'Password@123' })
-    @MinLength(6, { message: 'Mật khẩu phải ít nhất 6 ký tự' })
+    @MinLength(6, { message: 'Password must be at least 6 characters long' })
     password: string;
 }

@@ -10,14 +10,14 @@ export class AuthController {
     constructor(private authService: AuthService) { }
 
     @Post('register')
-    @ApiOperation({ summary: 'Đăng ký tài khoản mới' })
+    @ApiOperation({ summary: 'Register' })
     register(@Body() dto: RegisterDto) {
         return this.authService.register(dto);
     }
 
     @Post('login')
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Đăng nhập' })
+    @ApiOperation({ summary: 'Login' })
     login(@Body() dto: LoginDto) {
         return this.authService.login(dto);
     }
@@ -33,7 +33,7 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Đăng xuất' })
+    @ApiOperation({ summary: 'Logout' })
     logout(@Request() req: { user: { id: string } }) {
         return this.authService.logout(req.user.id);
     }

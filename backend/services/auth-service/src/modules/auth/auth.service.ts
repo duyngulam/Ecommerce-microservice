@@ -22,7 +22,7 @@ export class AuthService {
 
   async register(dto: RegisterDto) {
     const exists = await this.userRepository.findOne({ where: { email: dto.email } });
-    if (exists) throw new BadRequestException('Email đã được sử dụng');
+    if (exists) throw new BadRequestException('Email has already been registered');
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
@@ -34,7 +34,7 @@ export class AuthService {
     });
 
     await this.userRepository.save(user);
-    return { message: 'Đăng ký tài khoản thành công' };
+    return { message: 'Account registered successfully' };
   }
 
   async login(dto: LoginDto) {
@@ -43,10 +43,10 @@ export class AuthService {
       select: ['id', 'email', 'username', 'password', 'role'],
     });
 
-    if (!user) throw new UnauthorizedException('Thông tin đăng nhập không chính xác');
+    if (!user) throw new UnauthorizedException('Invalid login credentials');
 
     const isMatch = await bcrypt.compare(dto.password, user.password);
-    if (!isMatch) throw new UnauthorizedException('Thông tin đăng nhập không chính xác');
+    if (!isMatch) throw new UnauthorizedException('Invalid login credentials');
 
     const tokens = await this.generateTokens(user);
     await this.saveRefreshToken(user.id, tokens.refresh_token);
@@ -70,7 +70,7 @@ export class AuthService {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       });
     } catch {
-      throw new UnauthorizedException('Refresh token không hợp lệ hoặc đã hết hạn');
+      throw new UnauthorizedException('Refresh token is invalid or has expired');
     }
 
     const user = await this.userRepository.findOne({
@@ -79,11 +79,11 @@ export class AuthService {
     });
 
     if (!user?.refreshToken) {
-      throw new UnauthorizedException('Phiên đăng nhập không tồn tại — hãy đăng nhập lại');
+      throw new UnauthorizedException('Refresh token is invalid or has expired');
     }
 
     const tokenMatch = await bcrypt.compare(dto.refreshToken, user.refreshToken);
-    if (!tokenMatch) throw new UnauthorizedException('Refresh token không khớp');
+    if (!tokenMatch) throw new UnauthorizedException('Refresh token is invalid or has expired');
 
     const tokens = await this.generateTokens(user);
     await this.saveRefreshToken(user.id, tokens.refresh_token);
@@ -96,7 +96,7 @@ export class AuthService {
 
   async logout(userId: string) {
     await this.userRepository.update(userId, { refreshToken: null });
-    return { message: 'Đăng xuất thành công' };
+    return { message: 'Logout successful' };
   }
 
   private async generateTokens(user: Pick<User, 'id' | 'email' | 'role'>) {

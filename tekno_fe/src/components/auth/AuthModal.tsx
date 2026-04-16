@@ -16,7 +16,7 @@ export function AuthModal({ mode }: AuthModalProps) {
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold text-center">
-        {isLogin ? "Đăng nhập" : "Tạo tài khoản"}
+        {isLogin ? "Login" : "Create Account"}
       </h2>
 
       <div className="space-y-2">
@@ -32,15 +32,15 @@ export function AuthModal({ mode }: AuthModalProps) {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        {!isLogin && <Input placeholder="Xác nhận mật khẩu" type="password" />}
+        {!isLogin && <Input placeholder="Confirm Password" type="password" />}
       </div>
 
-      <Button className="w-full">{isLogin ? "Đăng nhập" : "Đăng ký"}</Button>
+      <Button className="w-full">{isLogin ? "Login" : "Create Account"}</Button>
 
       <p className="text-sm text-center text-muted-foreground">
-        {isLogin ? "Chưa có tài khoản?" : "Đã có tài khoản?"}{" "}
+        {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
         <span className="text-primary cursor-pointer hover:underline">
-          {isLogin ? "Đăng ký ngay" : "Đăng nhập"}
+          {isLogin ? "Sign up now" : "Log in"}
         </span>
       </p>
     </div>

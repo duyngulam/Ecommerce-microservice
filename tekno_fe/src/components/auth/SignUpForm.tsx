@@ -39,7 +39,7 @@ export default function SignUpForm({ switchToLogin }: SignupFormProps) {
 
     try {
       await signupApi({ username, email, password });
-      toast.success("Đăng ký thành công! Hãy đăng nhập để tiếp tục.");
+      toast.success("Account created successfully! Please log in.");
       switchToLogin();
     } catch (err: any) {
       setError(err.message);
@@ -123,7 +123,7 @@ export default function SignUpForm({ switchToLogin }: SignupFormProps) {
           className="text-primary cursor-pointer hover:underline"
           onClick={switchToLogin}
         >
-          Đăng nhập
+          Login
         </span>
       </p>
     </form>
