@@ -39,14 +39,13 @@ export default function LoginForm({ switchToRegister }: LoginFormProps) {
 
     try {
       const user = await login(email, password); // ✅ user trả về ngay dữ liệu đúng
-      toast.success("Đăng nhập thành công!");
-      //alert("Đăng nhập thành công!");
+      toast.success("Login successful!");
 
       if (user && user.role.toLowerCase() === "admin")
         router.push("/dashboard");
       else router.push("/");
     } catch (err: any) {
-      setError(err.message || "Đăng nhập thất bại");
+      setError(err.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -123,12 +122,12 @@ export default function LoginForm({ switchToRegister }: LoginFormProps) {
         {loading ? "Signing in..." : "Sign in"}
       </button>
       <p className="text-sm text-center text-muted-foreground">
-        Chưa có tài khoản?{" "}
+        Don't have an account?{" "}
         <span
           className="text-primary cursor-pointer hover:underline"
           onClick={switchToRegister}
         >
-          Đăng ký ngay
+          Sign up now
         </span>
       </p>
     </form>

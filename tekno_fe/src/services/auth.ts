@@ -1,28 +1,21 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
-export async function signupApi(data: {
-  username: string;
-  email: string;
-  password: string;
-  role: string;
-}) {
+export async function signupApi(data: { username: string; email: string; password: string }) {
   try {
     const res = await fetch(`${API_BASE_URL}/auth/register`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || "Đăng ký thất bại!");
+      throw new Error(err.message || "Registration failed");
     }
 
     return res.json();
   } catch (err: any) {
-    throw new Error(err.message || "Không thể kết nối server!");
+    throw new Error(err.message || "Failed to connect to server!");
   }
 }
 
@@ -35,17 +28,31 @@ export async function loginApi(data: { email: string; password: string }) {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || "Đăng nhập thất bại!");
+    throw new Error(err.message || "Login failed");
   }
 
   return res.json();
 }
 
-// export async function getCurrentUserApi() {
-//   const res = await fetch(`${API_BASE_URL}/auth/me`, {
-//     method: "GET",
-//     credentials: "include",
-//   });
-//   if (!res.ok) throw new Error("Không thể lấy thông tin người dùng");
-//   return await res.json();
-// }
+export async function refreshTokenApi(refreshToken: string) {
+  const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Session has expired, please log in again");
+  }
+
+  return res.json();
+}
+
+export async function logoutApi(accessToken: string) {
+  await fetch(`${API_BASE_URL}/auth/logout`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  }).catch(() => {
+  });
+}
