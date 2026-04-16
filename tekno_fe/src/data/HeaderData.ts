@@ -1,12 +1,11 @@
-import { getCategoriesList } from "@/services/categories";
+// HeaderData.ts
+// NOTE: category slug is fetched lazily in HeaderMenu instead of at module level
+// to avoid crashing the entire header when the backend is unavailable.
 
-const data = await getCategoriesList();
-const category = data[0].slug
 export const headerData = [
   { href: "/", match: "/", label: "Home" },
-  { href: `/products?category=${category}`, match: "/products", label: "Products" },
+  { href: "/products", match: "/products", label: "Products" },
   { href: "/blogs", match: "/blogs", label: "Blogs" },
   { href: "/faq", match: "/faq", label: "FAQ" },
   { href: "/contact-us", match: "/contact-us", label: "Contact us" },
 ];
-

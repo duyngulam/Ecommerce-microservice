@@ -1,7 +1,11 @@
-// src/api/auth.ts
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
-export async function signupApi(data: { username: string; email: string; password: string, role: string }) {
+export async function signupApi(data: {
+  username: string;
+  email: string;
+  password: string;
+  role: string;
+}) {
   try {
     const res = await fetch(`${API_BASE_URL}/auth/register`, {
       method: "POST",
@@ -9,7 +13,6 @@ export async function signupApi(data: { username: string; email: string; passwor
         "Content-Type": "application/json",
       },
       body: JSON.stringify(data),
-      credentials: "include", // Nếu backend dùng cookie
     });
 
     if (!res.ok) {
@@ -24,17 +27,14 @@ export async function signupApi(data: { username: string; email: string; passwor
 }
 
 export async function loginApi(data: { email: string; password: string }) {
-  console.log(data)
-  const res = await fetch("http://localhost:5000/api/auth/login", {
+  const res = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
 
-  // Nếu backend validate fail → trả về 400 Bad Request
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    // err.message chính là message bạn gửi từ BE
     throw new Error(err.message || "Đăng nhập thất bại!");
   }
 

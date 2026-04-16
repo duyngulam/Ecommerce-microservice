@@ -1,10 +1,10 @@
 "use client";
 import { createContext, useContext, useState, useEffect } from "react";
 import { loginApi } from "@/services/auth";
-import { userInfo } from "os";
 
 export interface User {
-  id: number;
+  id?: number;
+  username?: string;
   email: string;
   role: string;
   token: string;
@@ -55,21 +55,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (email: string, password: string) => {
     const res = await loginApi({ email, password });
 
-    const userData = res.data;
-
-    if (userData) {
+    if (res.access_token && res.user) {
       const userInfo: User = {
-        id: userData.id,
-        email: userData.email,
-        role: userData.role,
-        token: userData.token,
-        expiresAt: userData.expiresAt,
+        email: res.user.email,
+        username: res.user.username,
+        role: res.user.role,
+        token: res.access_token,
       };
 
       setUser(userInfo);
-      console.log("Login response:", user);
       localStorage.setItem("user", JSON.stringify(userInfo));
-      localStorage.setItem("token", userData.token);
+      localStorage.setItem("token", res.access_token);
 
       return userInfo;
     }

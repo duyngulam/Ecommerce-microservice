@@ -1,6 +1,6 @@
 ﻿// Lightweight fetch helper with JWT bearer support
 // Usage: import { get, post, put, del, postForm, setAuthToken, getAuthToken, API_BASE } from '@/lib/api'
-export const API_BASE = "http://localhost:5000/api";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
 export const AUTH_TOKEN_KEY = 'token';
 

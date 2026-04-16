@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { signupApi } from "@/services/auth";
+import { toast } from "sonner";
 import {
   Field,
   FieldContent,
@@ -40,16 +41,12 @@ export default function SignUpForm({ switchToLogin }: SignupFormProps) {
     const username = formData.get("username") as string;
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
-    const role = "Customer";
+    const role = "customer"; // backend enum expects lowercase
 
     try {
       const data = await signupApi({ username, email, password, role });
-
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-      }
-
-      alert("Đăng ký thành công! Hãy đăng nhập để tiếp tục.");
+      toast.success("Đăng ký thành công! Hãy đăng nhập để tiếp tục.");
+      switchToLogin();
     } catch (err: any) {
       setError(err.message);
     } finally {
