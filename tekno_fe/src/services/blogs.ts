@@ -37,7 +37,7 @@ export async function getBlogsList(page: number = 1, pageSize: number = 12) {
       pageSize: String(pageSize),
     });
 
-    const res = await fetch(`http://localhost:5000/api/blog?${params.toString()}`, {
+    const res = await fetch(`${API_BASE_URL}/blog?${params.toString()}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -59,7 +59,7 @@ export async function getBlogsList(page: number = 1, pageSize: number = 12) {
 
 export async function getBlogDetail(slug: string): Promise<BlogDetail> {
   try {
-    const res = await fetch(`http://localhost:5000/api/blog/${slug}`, {
+    const res = await fetch(`${API_BASE_URL}/blog/${slug}`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       cache: "no-store",

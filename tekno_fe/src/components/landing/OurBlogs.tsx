@@ -1,20 +1,37 @@
 "use client";
-import { getProductsList } from "@/services/products";
-import { Product } from "@/type/product";
 import { ChevronRight } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import ProductCard from "../product/ProductCard";
 import { useRouter } from "next/navigation";
 import { Blog } from "@/type/blog";
 import BlogCard from "../blog/BlogCard";
 import { getBlogsList } from "@/services/blogs";
 
-const data = await getBlogsList();
-
-const blogs: Blog[] = data.data.data.slice(0, 4);
 export default function OurBlogs() {
   const router = useRouter();
-  // const [blogs, setBlogs] = useState<Blog[]>();
+  const [blogs, setBlogs] = useState<Blog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    getBlogsList(1, 4)
+      .then((res) => {
+        if (!mounted) return;
+        // API may nest data differently — try common shapes safely
+        const list: Blog[] =
+          res?.data?.data ?? res?.data ?? res ?? [];
+        setBlogs(list.slice(0, 4));
+      })
+      .catch((err) => {
+        console.error("OurBlogs fetch error:", err);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => { mounted = false; };
+  }, []);
+
+  if (loading)
+    return <div className="py-4 text-sm text-gray-500">Loading blogs…</div>;
 
   return (
     <div className="flex flex-col gap-5">
@@ -27,14 +44,15 @@ export default function OurBlogs() {
           View all <ChevronRight className="w-5 h-5" />
         </button>
       </div>
-      <div className="grid grid-col-2 md:grid-cols-4 gap-5">
-        {blogs &&
-          blogs
-            ?.slice(0, 4)
-            .map((blog) => (
-              <BlogCard type="vertical" blog={blog} key={blog.id}></BlogCard>
-            ))}
-      </div>
+      {blogs.length === 0 ? (
+        <div className="py-4 text-sm text-gray-400">Không có bài viết nào.</div>
+      ) : (
+        <div className="grid grid-col-2 md:grid-cols-4 gap-5">
+          {blogs.map((blog) => (
+            <BlogCard type="vertical" blog={blog} key={blog.id} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
