@@ -1,7 +1,7 @@
 import { CartResponse } from "@/hook/useCart";
 import { Product } from "@/type/product";
 
-const BASE_URL = "http://localhost:5000/api";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
 export const cartApi = {
   getCart: async (token: string): Promise<CartResponse> => {
@@ -36,7 +36,7 @@ export const cartApi = {
 
   removeFromCart: async (token: string, variantId: number) => {
     const res = await fetch(`${BASE_URL}/cart/items/${variantId}`, {
-      method: "DELETE ",
+      method: "DELETE",
       credentials: "include",
       headers: {
         "Content-Type": "application/json",

@@ -112,7 +112,7 @@ export async function deleteCategory(id: number) {
 
 export async function getCategoryAttributesForFilter(categorySlug: string): Promise<CategoryAttribute[]> {
   try {
-    const res = await fetch(`http://localhost:5000/api/categories/${categorySlug}/attributes`, {
+    const res = await fetch(`${API_BASE_URL}/categories/${categorySlug}/attributes`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       cache: "no-store",
