@@ -6,13 +6,16 @@ export class User {
   id: string;
 
   @Column({ unique: true })
+  username: string;
+
+  @Column({ unique: true })
   email: string;
 
   @Column({ select: false })
   password: string;
 
-  @Column({ nullable: true })
-  fullName: string;
+  @Column({ default: 'customer' })
+  role: string;
 
   @CreateDateColumn()
   createdAt: Date;
