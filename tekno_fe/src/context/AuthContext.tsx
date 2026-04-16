@@ -13,6 +13,7 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
+  isLoading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
   hasRole: (role: string) => boolean;
@@ -24,6 +25,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -32,6 +34,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (saved) setUser(JSON.parse(saved));
     } catch {
       setUser(null);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -73,7 +77,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, [user, scheduleRefresh]);
 
-
   const login = async (email: string, password: string) => {
     const res = await loginApi({ email, password });
 
@@ -111,6 +114,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     <AuthContext.Provider
       value={{
         user,
+        isLoading,
         isAuthenticated: !!user,
         isAdmin: user?.role?.toLowerCase() === "admin",
         hasRole,
