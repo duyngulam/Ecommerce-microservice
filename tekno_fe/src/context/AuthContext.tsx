@@ -1,14 +1,14 @@
 "use client";
-import { createContext, useContext, useState, useEffect } from "react";
-import { loginApi } from "@/services/auth";
-import { userInfo } from "os";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { loginApi, logoutApi, refreshTokenApi } from "@/services/auth";
 
 export interface User {
-  id: number;
+  id?: string;
+  username?: string;
   email: string;
   role: string;
   token: string;
-  expiresAt?: string;
+  refreshToken?: string;
 }
 
 interface AuthContextType {
@@ -17,13 +17,14 @@ interface AuthContextType {
   isAdmin: boolean;
   hasRole: (role: string) => boolean;
   login: (email: string, password: string) => Promise<void | User>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     try {
@@ -34,51 +35,73 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
-  // Auto logout khi token hết hạn
+  const scheduleRefresh = useCallback(
+    (currentUser: User) => {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+      if (!currentUser.refreshToken) return;
+
+      const REFRESH_INTERVAL = 14 * 60 * 1000;
+
+      refreshTimerRef.current = setTimeout(async () => {
+        try {
+          const res = await refreshTokenApi(currentUser.refreshToken!);
+          const updated: User = {
+            ...currentUser,
+            token: res.access_token,
+            refreshToken: res.refresh_token,
+          };
+          setUser(updated);
+          localStorage.setItem("user", JSON.stringify(updated));
+          localStorage.setItem("token", res.access_token);
+          scheduleRefresh(updated);
+        } catch {
+          await doLogout(currentUser);
+        }
+      }, REFRESH_INTERVAL);
+    },
+    [],
+  );
+
   useEffect(() => {
-    if (!user?.expiresAt) return;
-
-    const expireTime = new Date(user.expiresAt).getTime() - Date.now();
-
-    if (expireTime <= 0) {
-      logout();
-      return;
+    if (user) {
+      scheduleRefresh(user);
+    } else {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     }
+    return () => {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    };
+  }, [user, scheduleRefresh]);
 
-    const timer = setTimeout(() => {
-      logout();
-    }, expireTime);
-
-    return () => clearTimeout(timer);
-  }, [user]);
 
   const login = async (email: string, password: string) => {
     const res = await loginApi({ email, password });
 
-    const userData = res.data;
-
-    if (userData) {
+    if (res.access_token && res.user) {
       const userInfo: User = {
-        id: userData.id,
-        email: userData.email,
-        role: userData.role,
-        token: userData.token,
-        expiresAt: userData.expiresAt,
+        id: res.user.id,
+        username: res.user.username,
+        email: res.user.email,
+        role: res.user.role,
+        token: res.access_token,
+        refreshToken: res.refresh_token,
       };
-
       setUser(userInfo);
-      console.log("Login response:", user);
       localStorage.setItem("user", JSON.stringify(userInfo));
-      localStorage.setItem("token", userData.token);
-
+      localStorage.setItem("token", res.access_token);
       return userInfo;
     }
   };
 
-  const logout = () => {
+  const doLogout = async (currentUser: User) => {
+    if (currentUser.token) await logoutApi(currentUser.token);
     setUser(null);
     localStorage.removeItem("user");
     localStorage.removeItem("token");
+  };
+
+  const logout = async () => {
+    if (user) await doLogout(user);
   };
 
   const hasRole = (role: string) =>

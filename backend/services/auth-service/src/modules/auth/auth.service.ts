@@ -1,53 +1,121 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from './entities/user.entity';
-import { RegisterDto, LoginDto } from './dto';
-import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import * as bcrypt from 'bcrypt';
+import { User } from './entities/user.entity';
+import { RegisterDto, LoginDto, RefreshTokenDto } from './dto';
 
 @Injectable()
 export class AuthService {
-    constructor(
-        @InjectRepository(User)
-        private userRepository: Repository<User>,
-        private jwtService: JwtService,
-    ) { }
+  constructor(
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    private jwtService: JwtService,
+    private configService: ConfigService,
+  ) { }
 
-    async register(dto: RegisterDto) {
-        const userExists = await this.userRepository.findOne({ where: { email: dto.email } });
-        if (userExists) throw new BadRequestException('Email đã được sử dụng');
+  async register(dto: RegisterDto) {
+    const exists = await this.userRepository.findOne({ where: { email: dto.email } });
+    if (exists) throw new BadRequestException('Email đã được sử dụng');
 
-        const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-        const user = this.userRepository.create({
-            ...dto,
-            password: hashedPassword,
-        });
-        await this.userRepository.save(user);
+    const user = this.userRepository.create({
+      username: dto.username,
+      email: dto.email,
+      password: hashedPassword,
+      role: 'customer',
+    });
 
-        return { message: 'Đăng ký tài khoản thành công' };
+    await this.userRepository.save(user);
+    return { message: 'Đăng ký tài khoản thành công' };
+  }
+
+  async login(dto: LoginDto) {
+    const user = await this.userRepository.findOne({
+      where: { email: dto.email },
+      select: ['id', 'email', 'username', 'password', 'role'],
+    });
+
+    if (!user) throw new UnauthorizedException('Thông tin đăng nhập không chính xác');
+
+    const isMatch = await bcrypt.compare(dto.password, user.password);
+    if (!isMatch) throw new UnauthorizedException('Thông tin đăng nhập không chính xác');
+
+    const tokens = await this.generateTokens(user);
+    await this.saveRefreshToken(user.id, tokens.refresh_token);
+
+    return {
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      },
+    };
+  }
+
+  async refresh(dto: RefreshTokenDto) {
+    let payload: { sub: string; email: string; role: string };
+    try {
+      payload = await this.jwtService.verifyAsync(dto.refreshToken, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      });
+    } catch {
+      throw new UnauthorizedException('Refresh token không hợp lệ hoặc đã hết hạn');
     }
 
-    async login(dto: LoginDto) {
-        const user = await this.userRepository.findOne({
-            where: { email: dto.email },
-            select: ['id', 'email', 'password', 'username', 'role'],
-        });
+    const user = await this.userRepository.findOne({
+      where: { id: payload.sub },
+      select: ['id', 'email', 'username', 'role', 'refreshToken'],
+    });
 
-        if (!user) throw new UnauthorizedException('Thông tin đăng nhập không chính xác');
-
-        const isMatch = await bcrypt.compare(dto.password, user.password);
-        if (!isMatch) throw new UnauthorizedException('Thông tin đăng nhập không chính xác');
-
-        const payload = { sub: user.id, email: user.email, role: user.role };
-        return {
-            access_token: await this.jwtService.signAsync(payload),
-            user: {
-                username: user.username,
-                email: user.email,
-                role: user.role,
-            },
-        };
+    if (!user?.refreshToken) {
+      throw new UnauthorizedException('Phiên đăng nhập không tồn tại — hãy đăng nhập lại');
     }
+
+    const tokenMatch = await bcrypt.compare(dto.refreshToken, user.refreshToken);
+    if (!tokenMatch) throw new UnauthorizedException('Refresh token không khớp');
+
+    const tokens = await this.generateTokens(user);
+    await this.saveRefreshToken(user.id, tokens.refresh_token);
+
+    return {
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+    };
+  }
+
+  async logout(userId: string) {
+    await this.userRepository.update(userId, { refreshToken: null });
+    return { message: 'Đăng xuất thành công' };
+  }
+
+  private async generateTokens(user: Pick<User, 'id' | 'email' | 'role'>) {
+    const payload = { sub: user.id, email: user.email, role: user.role };
+    const [access_token, refresh_token] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.get<string>('JWT_SECRET'),
+        expiresIn: '15m',
+      }),
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        expiresIn: '7d',
+      }),
+    ]);
+    return { access_token, refresh_token };
+  }
+
+  private async saveRefreshToken(userId: string, rawToken: string) {
+    const hashed = await bcrypt.hash(rawToken, 10);
+    await this.userRepository.update(userId, { refreshToken: hashed });
+  }
 }

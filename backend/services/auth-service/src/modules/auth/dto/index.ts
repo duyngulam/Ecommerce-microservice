@@ -1,4 +1,3 @@
-import { LoginDto } from './login.dto';
-import { RegisterDto } from './register.dto';
-
-export { RegisterDto, LoginDto };
+export { RegisterDto } from './register.dto';
+export { LoginDto } from './login.dto';
+export { RefreshTokenDto } from './refresh-token.dto';

@@ -17,6 +17,9 @@ export class User {
   @Column({ default: 'customer' })
   role: string;
 
+  @Column({ nullable: true, select: false })
+  refreshToken: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 }

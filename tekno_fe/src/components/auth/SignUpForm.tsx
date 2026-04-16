@@ -2,26 +2,22 @@
 
 import React, { useState } from "react";
 import { signupApi } from "@/services/auth";
+import { toast } from "sonner";
 import {
-  Field,
-  FieldContent,
-  FieldDescription,
   FieldError,
   FieldGroup,
-  FieldLabel,
   FieldLegend,
-  FieldSeparator,
   FieldSet,
-  FieldTitle,
 } from "@/components/ui/field";
-import { Input } from "../ui/input";
-import { Checkbox } from "../ui/checkbox";
+import { Field } from "@/components/ui/field";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "../ui/input-group";
 import { KeyIcon, MailIcon, UserRound } from "lucide-react";
+import { Checkbox } from "../ui/checkbox";
+import { FieldLabel } from "../ui/field";
 
 type SignupFormProps = {
   switchToLogin: () => void;
@@ -40,16 +36,11 @@ export default function SignUpForm({ switchToLogin }: SignupFormProps) {
     const username = formData.get("username") as string;
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
-    const role = "Customer";
 
     try {
-      const data = await signupApi({ username, email, password, role });
-
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-      }
-
-      alert("Đăng ký thành công! Hãy đăng nhập để tiếp tục.");
+      await signupApi({ username, email, password });
+      toast.success("Đăng ký thành công! Hãy đăng nhập để tiếp tục.");
+      switchToLogin();
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -119,8 +110,6 @@ export default function SignUpForm({ switchToLogin }: SignupFormProps) {
         <FieldError>{error}</FieldError>
       </FieldSet>
 
-      {/* {error && <p className="text-red-500 text-sm">{error}</p>} */}
-
       <button
         type="submit"
         disabled={loading}
@@ -129,7 +118,7 @@ export default function SignUpForm({ switchToLogin }: SignupFormProps) {
         {loading ? "Creating..." : "Create Account"}
       </button>
       <p className="text-sm text-center text-muted-foreground">
-        Chưa có tài khoản?{" "}
+        Đã có tài khoản?{" "}
         <span
           className="text-primary cursor-pointer hover:underline"
           onClick={switchToLogin}
